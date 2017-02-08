@@ -1,0 +1,31 @@
+#!/bin/bash
+echo "your current version is..." ($rsyslogd -v)
+echo "configuring selinux, please wait..."
+sleep 2
+sed -i 's/SELINUX=enforcing/g' /etc/selinux/config
+cd /etc/yum.repos.d
+touch rsyslog.repo
+echo "[rsyslog_v8]
+name=Adiscon CentOS-$releasever - local packages for $basearch
+baseurl=http://rpms.adiscon.com/v8-stable/epel-$releasever/$basearch
+enabled=1
+gpgcheck=0
+gpgkey=http://rpms.adiscon.com/RPM-GPG-KEY-Adiscon
+protect=1" >> rsyslog.repo
+cp -p /etc/rsyslog.conf /etc/rsyslog.conf.bk
+echo "just a second pls, updating rsyslog"
+sleep 2
+yum update rsyslog
+sleep 2
+echo "Rsyslog has been updated. Now your current version is...." ($rsyslogd -v)
+cp -p /etc/rsyslog.conf /etc/rsyslog.conf.orig.v8
+sed -i 's/#$ModLoad imudp/$ModLoad imudp/g' /etc/rsyslog.conf 
+sed -i 's/#$UDPServerRun 514/$UDPServerRun 514/g' /etc/rsyslog.conf
+echo "$template TmplAuth, "/var/log/rsyslog_custom/%HOSTNAME%/%PROGRAMNAME%.log" 
+$template TmplMsg, "/var/log/rsyslog_custom/%HOSTNAME%/%PROGRAMNAME%.log" 
+authpriv.*   ?TmplAuth
+*.info,mail.none,authpriv.none,cron.none   ?TmplMsg >> /etc/rsyslog.conf
+service rsyslog start
+echo "-A INPUT -m state --state NEW -m udp -p udp --dport 514 -j ACCEPT" >> /etc/sysconfig/iptables
+sevice iptables restart
+/etc/init.d/rsyslog restart
