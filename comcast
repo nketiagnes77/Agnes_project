@@ -1,4 +1,5 @@
 #!/bin/bash
 echo "hello world"
 echo $?
-exit 0
+exit 99
+echo $?
